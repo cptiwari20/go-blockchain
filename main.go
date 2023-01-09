@@ -42,7 +42,18 @@ type Blockchain struct{
 
 var blockchain Blockchain
 
-func newBook (w http.ResponseWriter, r *http.Request) {
+func (bchain Blockchain) AddBlock(checkOutInfo BookCheckout){
+	// create a new block using previos Hash
+		// generate a new hash and add hash to the new block and with data is checkoutInfo
+	// validate the block
+		// check previosHash and the old hash
+		// check positing
+		// check the hash is right hash.
+	// if data is validated properly add to the blockchain 
+
+}
+
+func newBook(w http.ResponseWriter, r *http.Request) {
 	var book Book
 
 	if err := json.NewDecoder(r.Body).Decode(&book); err !=nil {
@@ -80,19 +91,23 @@ func getBlockchain(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(jbytes))
 }
 
-// func writeBlock(w http.ResponseWriter, r *http.Request) {
-// 	var bookCheckout BookCheckout
+func writeBlock(w http.ResponseWriter, r *http.Request) {
+	var bookCheckout BookCheckout
 
-// 	if err := json.NewDecoder(r.Body).Decode(&bookCheckout); err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		log.Println("Something went wrong please check :%v", err)
-// 		w.Write([]byte("Something went wrong please check"))
-// 	}
+	if err := json.NewDecoder(r.Body).Decode(&bookCheckout); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Something went wrong please check : %v", err)
+		w.Write([]byte("Something went wrong please check"))
+	}
+
+	blockchain.AddBlock(bookCheckout)
 
 
-// }
+}
 
 func main(){
+
+	// TODO:: create a new genesis block on the function start.
 	r := mux.NewRouter()
 	r.HandleFunc("/", getBlockchain).Methods("GET")
 	r.HandleFunc("/", writeBlock).Methods("POST")
