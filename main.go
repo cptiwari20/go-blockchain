@@ -1,6 +1,9 @@
 package main
  
 import (
+	"crypto/md5"
+	"fmt"
+	"io"
 	"log"
 	"encoding/json"
 	"net/http"
@@ -13,6 +16,10 @@ type Block struct {
 }
 
 type BookCheckout struct {
+	BookId		string 		`json:book_id`
+	CreatedAt	string		`json:created_at`
+	User		string 		`json:user`
+	IsGenesis	bool		`json:is_genesis`
 
 }
 
@@ -21,31 +28,43 @@ type Book struct {
 	Author 		string		`json:"author"`
 	PublishDate	string		`json:"publish_date"`
 	CreatedAt	string		`json:"created_at"`
-	ISBT		string		`json:"isbt"`
+	ISBN		string		`json:"isbn"`
 
 }
 
-type Blockchain {
+type Blockchain struct{
 	blocks []*Block
 }
 
 func newBook (w http.ResponseWriter, r *http.Request) {
 	var book Book
 
-	err := json.NewDecoder(r.Body).Decode(&book); err !=nil {
+	if err := json.NewDecoder(r.Body).Decode(&book); err !=nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Could not create :%v", err)
 		w.Write([]byte("could not create a new book"))
 		return
 	}
 
-	h := md5.New()
+	hash := md5.New()
+	io.WriteString(hash, book.ISBN + book.PublishDate)
+	book.ID = fmt.Sprintf("%x", hash.Sum(nil))
+	
+	resp, err := json.MarshalIndent(book, " ", " ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Unable to marshal the json :%v", err)
+		w.Write([]byte("Could not marshal the json"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(resp)
 }
 
 func main(){
 	r := mux.NewRouter()
-	r.HandleFunc("/", getBlockchain).Methods("GET")
-	r.HandleFunc("/", writeBlock).Methods("POST")
+	// r.HandleFunc("/", getBlockchain).Methods("GET")
+	// r.HandleFunc("/", writeBlock).Methods("POST")
 	r.HandleFunc("/new", newBook).Methods("POST")
 
 	log.Println("Listening on the port 3000")
