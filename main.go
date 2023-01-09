@@ -12,6 +12,11 @@ import (
 
 // Structs
 type Block struct {
+	PreviousHash 		string
+	Position			int
+	Data				string
+	
+
 
 }
 
@@ -20,7 +25,6 @@ type BookCheckout struct {
 	CreatedAt	string		`json:created_at`
 	User		string 		`json:user`
 	IsGenesis	bool		`json:is_genesis`
-
 }
 
 type Book struct {
@@ -35,6 +39,8 @@ type Book struct {
 type Blockchain struct{
 	blocks []*Block
 }
+
+var blockchain Blockchain
 
 func newBook (w http.ResponseWriter, r *http.Request) {
 	var book Book
@@ -61,10 +67,35 @@ func newBook (w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
+func getBlockchain(w http.ResponseWriter, r *http.Request) {
+	jbytes, err := json.MarshalIndent(blockchain.blocks, "", " ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+
+	w.Write([]byte("This is response"))
+	io.WriteString(w, string(jbytes))
+}
+
+// func writeBlock(w http.ResponseWriter, r *http.Request) {
+// 	var bookCheckout BookCheckout
+
+// 	if err := json.NewDecoder(r.Body).Decode(&bookCheckout); err != nil {
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		log.Println("Something went wrong please check :%v", err)
+// 		w.Write([]byte("Something went wrong please check"))
+// 	}
+
+
+// }
+
 func main(){
 	r := mux.NewRouter()
-	// r.HandleFunc("/", getBlockchain).Methods("GET")
-	// r.HandleFunc("/", writeBlock).Methods("POST")
+	r.HandleFunc("/", getBlockchain).Methods("GET")
+	r.HandleFunc("/", writeBlock).Methods("POST")
 	r.HandleFunc("/new", newBook).Methods("POST")
 
 	log.Println("Listening on the port 3000")
