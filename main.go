@@ -2,22 +2,23 @@ package main
  
 import (
 	"crypto/md5"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
 	"encoding/json"
 	"net/http"
 	"github.com/gorilla/mux"
+	"time"
 )
 
 // Structs
 type Block struct {
 	PreviousHash 		string
 	Position			int
-	Data				string
-	
-
-
+	Data				BookCheckout
+	Hash				string
+	CreatedAt			string
 }
 
 type BookCheckout struct {
@@ -41,15 +42,32 @@ type Blockchain struct{
 }
 
 var blockchain Blockchain
+func (b *Block) generateHash()  {
+	
+}
+
+func createBlock(prevBlock *Block, checkOutInfo BookCheckout) *Block  {
+	block := &Block{}
+	block.PreviousHash = prevBlock.Hash
+	block.Data = checkOutInfo
+	block.Position = prevBlock.Position + 1
+	block.CreatedAt = time.Now().String()
+	// generate a new hash and add hash to the new block and with data is checkoutInfo
+	block.generateHash()
+	return block
+}
 
 func (bchain Blockchain) AddBlock(checkOutInfo BookCheckout){
 	// create a new block using previos Hash
-		// generate a new hash and add hash to the new block and with data is checkoutInfo
-	// validate the block
+	prevBlock := bchain.blocks[len(bchain.blocks) - 1]
+	newBlock := createBlock(prevBlock, checkOutInfo)
+		// validate the block
 		// check previosHash and the old hash
 		// check positing
 		// check the hash is right hash.
 	// if data is validated properly add to the blockchain 
+
+	bchain.blocks = append(bchain.blocks, newBlock)
 
 }
 
