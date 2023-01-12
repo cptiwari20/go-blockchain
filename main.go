@@ -54,10 +54,14 @@ func (b *Block) generateHash()  {
 	hash.Write([]byte(dataToHash))
 
 	block.Hash = hex.EncodeToString(hash.Sum(nil))
+	fmt.Printf("this is block %v", block)
+	fmt.Printf("this is Hash %v", block.Hash)
+	fmt.Printf("this is position %v", block.Position)
+	fmt.Printf("this is data %v", block.Data)
 }
 
 func createBlock(prevBlock *Block, checkOutInfo BookCheckout) *Block  {
-	block := new(Block)
+	block := &Block{}
 	block.PreviousHash = prevBlock.Hash
 	block.Data = checkOutInfo
 	block.Position = prevBlock.Position + 1
@@ -67,20 +71,53 @@ func createBlock(prevBlock *Block, checkOutInfo BookCheckout) *Block  {
 	return block
 }
 
+func isValid(block *Block, prevBlock *Block) bool {
+	// check previosHash and the old hash
+	if block.PreviousHash == prevBlock.Hash {
+		return true
+	}
+		// check positing
+	if block.Position == prevBlock.Position +1 {
+		return true
+	}
+		// check the hash is right hash.
+	if block.validateHash(block.Hash) {
+		return true
+	}
+	return false
+}
+
+func (block Block) validateHash(hash string) bool  {
+	block.generateHash()
+
+	if block.Hash == hash {
+		return true
+	}
+	return false
+}
+
 func (bchain Blockchain) AddBlock(checkOutInfo BookCheckout){
 	// create a new block using previos Hash
 	prevBlock := bchain.blocks[len(bchain.blocks) - 1]
 	newBlock := createBlock(prevBlock, checkOutInfo)
 		// validate the block
-		// check previosHash and the old hash
-		// check positing
-		// check the hash is right hash.
-	// if data is validated properly add to the blockchain 
-
-	bchain.blocks = append(bchain.blocks, newBlock)
+	if isValid(newBlock, prevBlock) {
+		// if data is validated properly add to the blockchain 
+		bchain.blocks = append(bchain.blocks, newBlock)
+	}
 
 }
+// new Blockchan
+func createGenesisBlock() *Block {
+	return createBlock(&Block{}, BookCheckout{IsGenesis: true})
+}
+func NewBlockChain() *Blockchain {
+	return &Blockchain{
+		[]*Block{createGenesisBlock()},
+	}
+}
 
+// handle routes
 func newBook(w http.ResponseWriter, r *http.Request) {
 	var book Book
 
@@ -115,7 +152,7 @@ func getBlockchain(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 
-	w.Write([]byte("This is response"))
+	// w.Write([]byte("This is response"))
 	io.WriteString(w, string(jbytes))
 }
 
@@ -126,20 +163,43 @@ func writeBlock(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Something went wrong please check : %v", err)
 		w.Write([]byte("Something went wrong please check"))
+		return
 	}
 
 	blockchain.AddBlock(bookCheckout)
 
+	resp, err := json.MarshalIndent(bookCheckout, " ", " ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Something went wrong after creating a block %v", err)
+		w.Write([]byte("Something went wrong afater creating block, the checkout item not found!"))
+		return
+	}
 
+	w.WriteHeader(http.StatusOK)
+	w.Write(resp)
 }
 
 func main(){
 
-	// TODO:: create a new genesis block on the function start.
+	// create a new genesis block on the function start.
+
+	BlockChain := NewBlockChain()
+
 	r := mux.NewRouter()
 	r.HandleFunc("/", getBlockchain).Methods("GET")
 	r.HandleFunc("/", writeBlock).Methods("POST")
 	r.HandleFunc("/new", newBook).Methods("POST")
+
+	go func() {
+		for _, block := range BlockChain.blocks {
+			fmt.Printf("Prev. hash: %x\n", block.PreviousHash)
+			bytes, _ := json.MarshalIndent(block.Data, "", " ")
+			fmt.Printf("Data: %v\n", string(bytes))
+			fmt.Printf("Hash: %x\n", block.Hash)
+			fmt.Println()
+		}
+	}()
 
 	log.Println("Listening on the port 3000")
 	log.Fatal(http.ListenAndServe(":3000", r))
