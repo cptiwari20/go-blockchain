@@ -3,10 +3,11 @@ package main
 import (
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"encoding/json"
 	"net/http"
 	"github.com/gorilla/mux"
 	"time"
@@ -43,11 +44,20 @@ type Blockchain struct{
 
 var blockchain Blockchain
 func (b *Block) generateHash()  {
-	
+	block := &Block{}
+
+	blockData, _ := json.Marshal(b.Data)
+	// each block should be unique in position, time, previous block history and the data
+	dataToHash := string(block.Position) + string(blockData) + block.CreatedAt + block.PreviousHash
+	// encrypt this data
+	hash := sha256.New()
+	hash.Write([]byte(dataToHash))
+
+	block.Hash = hex.EncodeToString(hash.Sum(nil))
 }
 
 func createBlock(prevBlock *Block, checkOutInfo BookCheckout) *Block  {
-	block := &Block{}
+	block := new(Block)
 	block.PreviousHash = prevBlock.Hash
 	block.Data = checkOutInfo
 	block.Position = prevBlock.Position + 1
